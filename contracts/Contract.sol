@@ -61,6 +61,9 @@ contract Battleship {
             // Store player grid and ships
             PlayerData storage player2Data = players[player2];
             player2Data.shipsRemaining = uint8(_ships.length);
+
+            // Set turn to player 1
+            state.whoseTurn = player1
         } else {
             player1 = msg.sender;
             player1Payable = payable(player1);
