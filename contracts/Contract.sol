@@ -63,7 +63,7 @@ contract Battleship {
             player2Data.shipsRemaining = uint8(_ships.length);
 
             // Set turn to player 1
-            state.whoseTurn = player1
+            state.whoseTurn = player1;
         } else {
             player1 = msg.sender;
             player1Payable = payable(player1);
