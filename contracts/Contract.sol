@@ -10,7 +10,6 @@ contract Battleship {
     bool public gameOver;
 
     struct GameState {
-        uint8 num; //????
         address whoseTurn;
     }
 
@@ -127,13 +126,16 @@ contract Battleship {
             emit RegisterHit(msg.sender, 0);
         }
 
+        // Emit move made 
+        emit MoveMade(msg.sender, x, y);
+        emit MoveMade(opponentOf(msg.sender), x, y);
+
         // Switch turns
         state.whoseTurn = opponentOf(msg.sender);
 
         // Clear timeout
         timeout = 2**256 - 1;
 
-        emit MoveMade(msg.sender, x, y);
     }
 
     function opponentOf(address player) internal view returns (address) {
