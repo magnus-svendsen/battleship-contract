@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
-contract Battleship {
+contract Battleship is ReentrancyGuard {
     address public player1;
     address public player2;
     address payable private player1Payable;
@@ -41,12 +41,12 @@ contract Battleship {
     event RegisterHit(address player, uint8 hit);
 
     constructor() {
-
+      gameOver = true; // Initialize gameOver to true
     }
 
     function join(PlayerData memory pl, Ship[] memory _ships) public payable {
         require(player2 == address(0), "Game has already started.");
-        require(!gameOver, "Game was canceled.");
+        require(gameOver, "A game is already in progress.");
         require(msg.value == betAmount, "Wrong bet amount.");
         
         if (address(player1) != address(0) && msg.sender != address(player1)) {
@@ -64,6 +64,7 @@ contract Battleship {
 
             // Set turn to player 1
             state.whoseTurn = player1;
+            gameOver = false; // Set gameOver to false when the game starts
         } else {
             player1 = msg.sender;
             player1Payable = payable(player1);
@@ -82,7 +83,7 @@ contract Battleship {
         emit GameStarted();
     }
 
-    function cancel() public {
+    function cancel() public nonReentrant {
         require(msg.sender == player1, "Only first player may cancel.");
         require(player2 == address(0), "Game has already started.");
 
@@ -90,7 +91,7 @@ contract Battleship {
         payable(msg.sender).transfer(address(this).balance);
     }
 
-    function move(uint8 x, uint8 y) public {
+    function move(uint8 x, uint8 y) public nonReentrant {
         require(!gameOver, "Game has ended.");
         require(msg.sender == state.whoseTurn, "Not your turn.");
         require((x >= 0 && x < 10) && (y >= 0 && y < 10),
@@ -160,7 +161,7 @@ contract Battleship {
         emit TimeoutStarted();
     }
 
-    function claimTimeout() public {
+    function claimTimeout() public nonReentrant {
         require(!gameOver, "Game has ended.");
         require(block.timestamp >= timeout);
 
