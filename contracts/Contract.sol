@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
-contract Battleship is ReentrancyGuard {
+contract Battleship {
     address public player1;
     address public player2;
     address payable private player1Payable;
@@ -83,7 +83,7 @@ contract Battleship is ReentrancyGuard {
         emit GameStarted();
     }
 
-    function cancel() public nonReentrant {
+    function cancel() public {
         require(msg.sender == player1, "Only first player may cancel.");
         require(player2 == address(0), "Game has already started.");
 
@@ -91,7 +91,7 @@ contract Battleship is ReentrancyGuard {
         payable(msg.sender).transfer(address(this).balance);
     }
 
-    function move(uint8 x, uint8 y) public nonReentrant {
+    function move(uint8 x, uint8 y) public {
         require(!gameOver, "Game has ended.");
         require(msg.sender == state.whoseTurn, "Not your turn.");
         require((x >= 0 && x < 10) && (y >= 0 && y < 10),
@@ -161,7 +161,7 @@ contract Battleship is ReentrancyGuard {
         emit TimeoutStarted();
     }
 
-    function claimTimeout() public nonReentrant {
+    function claimTimeout() public {
         require(!gameOver, "Game has ended.");
         require(block.timestamp >= timeout);
 
