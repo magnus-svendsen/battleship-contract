@@ -27,6 +27,7 @@ contract Battleship {
 
     mapping(address => PlayerData) public players;
     mapping(address => Ship[]) public ships;
+    mapping(address => mapping(uint8 => mapping(uint8 => uint))) public shipCoordinates; // Mapping to track ship coordinates
 
     GameState public state;
 
@@ -34,19 +35,27 @@ contract Battleship {
     uint256 public timeoutInterval = 300;
     uint256 public timeout = 2**256 - 1;
 
-    event GameStarted();
+    event GameStarted(bool started);
     event TimeoutStarted();
     event MoveMade(address player, uint8 x, uint8 y);
-    event GameOver();
+    event GameOver(bool ended);
     event RegisterHit(address player, uint8 hit);
 
     constructor() {
+        gameOver = true; // Initialize gameOver to true
+    }
 
+    function eventToggler() public {
+        emit GameStarted(true);
+    }
+
+    function eventToggler2() public {
+        emit GameStarted(false);
     }
 
     function join(PlayerData memory pl, Ship[] memory _ships) public payable {
         require(player2 == address(0), "Game has already started.");
-        require(!gameOver, "Game was canceled.");
+        require(gameOver, "A game is already in progress.");
         require(msg.value == betAmount, "Wrong bet amount.");
         
         if (address(player1) != address(0) && msg.sender != address(player1)) {
@@ -64,22 +73,18 @@ contract Battleship {
 
             // Set turn to player 1
             state.whoseTurn = player1;
+            gameOver = false; // Set gameOver to false when the game starts
+            emit GameStarted(true); // Emit GameStarted event with true
         } else {
             player1 = msg.sender;
             player1Payable = payable(player1);
             betAmount = msg.value;
 
             players[player1] = pl;
-
             for (uint i = 0; i < _ships.length; i++) {
                 ships[player1].push(_ships[i]);
             }
         }
-
-        
-      
-
-        emit GameStarted();
     }
 
     function cancel() public {
@@ -87,6 +92,8 @@ contract Battleship {
         require(player2 == address(0), "Game has already started.");
 
         gameOver = true;
+        emit GameStarted(false);
+        emit GameOver(true);
         payable(msg.sender).transfer(address(this).balance);
     }
 
@@ -103,25 +110,20 @@ contract Battleship {
             opponentData.grid[x][y] = 3;        // Mark as hit
 
             // Check if any ship is destroyed
-            Ship[] storage opponentShips = ships[opponentOf(msg.sender)];
-            for (uint i = 0; i < opponentShips.length; i++) {
-                Ship storage ship = opponentShips[i];
+            uint shipIndex = shipCoordinates[opponentOf(msg.sender)][x][y];
+            Ship storage ship = ships[opponentOf(msg.sender)][shipIndex];
 
-                // If a ship contains the hit coordinate
-                for (uint j = 0; j < ship.coordinates.length; j++) {
-                    if (ship.coordinates[j][0] == x && ship.coordinates[j][1] == y) {
-                        ship.timesHit += 1;
-                        emit RegisterHit(msg.sender, 3);
-                        if (ship.timesHit == ship.length) {
-                            ship.isDestroyed = true;
-                            opponentData.shipsRemaining -= 1;
+            ship.timesHit += 1;
+            emit RegisterHit(msg.sender, 3);
+            if (ship.timesHit == ship.length) {
+                ship.isDestroyed = true;
+                opponentData.shipsRemaining -= 1;
 
-                            if (opponentData.shipsRemaining == 0) {
-                                gameOver = true;
-                                payableOpponentOf(state.whoseTurn).transfer(address(this).balance);
-                            }
-                        }
-                    }
+                if (opponentData.shipsRemaining == 0) {
+                    gameOver = true;
+                    emit GameStarted(false); // Emit GameStarted event with false
+                    emit GameOver(true);
+                    payableOpponentOf(state.whoseTurn).transfer(address(this).balance);
                 }
             }
         } else {
@@ -138,7 +140,6 @@ contract Battleship {
 
         // Clear timeout
         timeout = 2**256 - 1;
-
     }
 
     function opponentOf(address player) internal view returns (address) {
@@ -165,6 +166,8 @@ contract Battleship {
         require(block.timestamp >= timeout);
 
         gameOver = true;
+        emit GameStarted(false); // Emit GameStarted event with false
+        emit GameOver(true);
         payableOpponentOf(state.whoseTurn).transfer(address(this).balance);
     }
 }
